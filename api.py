@@ -36,7 +36,7 @@ app = Flask(__name__)
 
 VACANCIES_LIST_QUERY = """
 query VacanciesList($first: Int!, $after: String) {
-  vacancies(first: $first, after: $after, filter: { reviewStatus: { eq: APPROVED } }) {
+  allVacancies(first: $first, after: $after, filter: { reviewStatus: { eq: APPROVED } }) {
     pageInfo {
       hasNextPage
       startCursor
@@ -679,8 +679,8 @@ class BemloClient:
             
             result = self.fetch_vacancies_page(first=30, after=after)
             
-            edges = result.get("data", {}).get("vacancies", {}).get("edges", [])
-            page_info = result.get("data", {}).get("vacancies", {}).get("pageInfo", {})
+            edges = result.get("data", {}).get("allVacancies", {}).get("edges", [])
+            page_info = result.get("data", {}).get("allVacancies", {}).get("pageInfo", {})
             
             for edge in edges:
                 node = edge.get("node", {})
