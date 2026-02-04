@@ -1237,7 +1237,7 @@ def export_csv():
     csv_lines = [",".join(headers)]
     for row in rows:
         csv_lines.append(",".join([
-            f'"{str(v).replace('"', '""') if v else ""}"' for v in row
+            '"{}"'.format(str(v).replace('"', '""') if v else "") for v in row
         ]))
     
     return Response(
