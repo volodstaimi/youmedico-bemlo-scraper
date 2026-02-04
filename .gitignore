@@ -1,4 +1,5 @@
 __pycache__/
-*.pyc
-*.db
+*.py[cod]
 .env
+*.db
+.DS_Store
