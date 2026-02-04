@@ -1,28 +1,23 @@
-# Bemlo Scraper - GCP Deployment
+# Bemlo Vacancy Scraper v2.0 (Enhanced)
 
-## Files to upload to GitHub:
-- api.py
-- Dockerfile
-- .gitignore
+Scrapes healthcare staffing tenders from Bemlo with full details.
 
-## GCP Console Commands (run in Cloud Shell)
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | API info |
+| GET | `/health` | Health check |
+| GET | `/stats` | Database statistics |
+| GET | `/vacancies` | List vacancies (params: profession, region, status, limit, offset) |
+| GET | `/vacancy/{id}` | Single vacancy with requirements, shifts, price groups |
+| GET | `/vacancy/{id}/shifts` | Shifts for a vacancy |
+| GET | `/export` | Download CSV |
+| POST | `/scrape` | Trigger scrape |
+
+## Deploy
 
 ```bash
-# 1. Clone your repo
-git clone https://github.com/YOUR_USERNAME/bemlo-scraper.git
-cd bemlo-scraper
-
-# 2. Set your project
-gcloud config set project YOUR_PROJECT_ID
-
-# 3. Enable APIs
-gcloud services enable run.googleapis.com secretmanager.googleapis.com cloudbuild.googleapis.com
-
-# 4. Create secrets (one-time)
-echo -n "karl@youpal.se" | gcloud secrets create bemlo-email --data-file=-
-echo -n "@Energy2025!" | gcloud secrets create bemlo-password --data-file=-
-
-# 5. Build and deploy
 gcloud run deploy bemlo-scraper \
   --source . \
   --region europe-north1 \
@@ -30,16 +25,12 @@ gcloud run deploy bemlo-scraper \
   --memory 512Mi \
   --timeout 300 \
   --set-secrets "BEMLO_EMAIL=bemlo-email:latest,BEMLO_PASSWORD=bemlo-password:latest"
-
-# 6. Test it
-SERVICE_URL=$(gcloud run services describe bemlo-scraper --region europe-north1 --format 'value(status.url)')
-echo $SERVICE_URL
-curl -X POST $SERVICE_URL/scrape
 ```
 
-## Endpoints
-- GET  /health    - Health check
-- GET  /stats     - Statistics  
-- GET  /vacancies - Get data as JSON
-- GET  /export    - Download CSV
-- POST /scrape    - Trigger scrape
+## Data Captured
+
+- Vacancies: title, profession, specializations, region, rate, scope, fill_rate, status
+- Details: description, requirements, contact info, billing info
+- Shifts: date, time, duration, status (VACANT/BOOKED)
+- Requirements: documents, experience, journal systems, specializations
+- Price groups: by specialization
