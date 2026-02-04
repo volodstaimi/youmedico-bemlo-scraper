@@ -35,54 +35,61 @@ app = Flask(__name__)
 # ============================================
 
 VACANCIES_LIST_QUERY = """
-query VacanciesList($take: Int!, $skip: Int) {
+query VacanciesList($afterCursor: String, $filter: VacancyFilter!, $orderBy: VacancyOrderBy!, $orderDir: OrderByDirection!, $take: Int!) {
   allVacancies(
-    take: $take,
-    skip: $skip,
-    orderBy: CREATED_AT,
-    orderDir: DESC,
-    filter: { reviewStatus: { eq: APPROVED } }
+    afterCursor: $afterCursor
+    filter: $filter
+    orderBy: $orderBy
+    orderDir: $orderDir
+    take: $take
   ) {
-    cursor
-    node {
-      id
-      title
-      createdAt
-      profession
-      specializations
-      isViewed
-      jobType
-      jobEndsAt
-      jobStartsAt
-      lastApplicationDate
-      hasLastApplicationDate
-      reviewStatus
-      procuredAmount
-      procuredAmountCurrency
-      municipality
-      region
-      tender {
+    pageInfo {
+      hasNextPage
+      startCursor
+      endCursor
+    }
+    edges {
+      cursor
+      node {
         id
         title
-        extensionForId
-        announcedAt
-        startsAt
-        endsAt
-        scope
-        lastPresentationDate
-        pricing
-        scheduleType
-        dynamicStatus
-        urgentShiftsCount
-        fillRate
-        unit {
+        createdAt
+        profession
+        specializations
+        isViewed
+        jobType
+        jobEndsAt
+        jobStartsAt
+        lastApplicationDate
+        hasLastApplicationDate
+        reviewStatus
+        procuredAmount
+        procuredAmountCurrency
+        municipality
+        region
+        tender {
           id
-          name
-          municipality
-        }
-        orderer {
-          id
-          displayName
+          title
+          extensionForId
+          announcedAt
+          startsAt
+          endsAt
+          scope
+          lastPresentationDate
+          pricing
+          scheduleType
+          dynamicStatus
+          urgentShiftsCount
+          fillRate
+          unit {
+            id
+            name
+            municipality
+          }
+          orderer {
+            id
+            displayName
+          }
         }
       }
     }
@@ -650,9 +657,22 @@ class BemloClient:
         
         return response.json()
     
-    def fetch_vacancies_page(self, take: int = 30, skip: int = 0) -> dict:
+    def fetch_vacancies_page(self, take: int = 30, after_cursor: str = None) -> dict:
         """Fetch a page of vacancies with enhanced data"""
-        variables = {"take": take, "skip": skip}
+        variables = {
+            "filter": {
+                "AND": [
+                    {"tender": {"doesAcceptPresentations": True}},
+                    {}
+                ]
+            },
+            "take": take,
+            "orderBy": "CREATED_AT",
+            "orderDir": "DESC"
+        }
+        if after_cursor:
+            variables["afterCursor"] = after_cursor
+        
         return self._make_request(VACANCIES_LIST_QUERY, variables)
     
     def fetch_vacancy_details(self, vacancy_id: str) -> dict:
@@ -666,30 +686,30 @@ class BemloClient:
     def fetch_all_vacancies(self) -> List[dict]:
         """Fetch all vacancies with pagination"""
         all_vacancies = []
-        skip = 0
-        take = 30
+        after_cursor = None
         page = 0
         
         while True:
             page += 1
-            print(f"[{datetime.now()}] Fetching page {page} (skip={skip})...")
+            print(f"[{datetime.now()}] Fetching page {page}...")
             
-            result = self.fetch_vacancies_page(take=take, skip=skip)
+            result = self.fetch_vacancies_page(take=30, after_cursor=after_cursor)
             
-            items = result.get("data", {}).get("allVacancies", [])
+            all_vac = result.get("data", {}).get("allVacancies", {})
+            edges = all_vac.get("edges", [])
+            page_info = all_vac.get("pageInfo", {})
             
-            for item in items:
-                node = item.get("node", {})
+            for edge in edges:
+                node = edge.get("node", {})
                 if node:
                     all_vacancies.append(node)
             
-            print(f"[{datetime.now()}] Got {len(items)} vacancies (total: {len(all_vacancies)})")
+            print(f"[{datetime.now()}] Got {len(edges)} vacancies (total: {len(all_vacancies)})")
             
-            # If we got fewer than requested, we're done
-            if len(items) < take:
+            if not page_info.get("hasNextPage"):
                 break
             
-            skip += take
+            after_cursor = page_info.get("endCursor")
         
         return all_vacancies
 
